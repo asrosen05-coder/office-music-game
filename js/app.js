@@ -1,0 +1,223 @@
+import { loadData } from './data.js';
+import * as player from './player.js';
+import * as quiz from './quiz.js';
+import * as ui from './ui.js';
+import { haptic } from './motion.js';
+
+const RESULT_SHEET_DELAY_MS = 420; // let the marked answer register before the sheet rises
+const MAX_CONSECUTIVE_ERRORS = 3;
+
+let gameData = null;
+let consecutiveErrors = 0;
+let state = null;
+let ticker = 0;
+let suspended = false;
+let resumeAudio = false;
+let resultTimer = 0;
+
+const now = () => performance.now();
+
+async function init() {
+  ui.onOptionAction({ answer: onAnswer, info: onInfo });
+  ui.onSkip(onSkip);
+  ui.onReveal(onReveal);
+  ui.onContinue(onContinue);
+  ui.onQuit({ open: suspend, cancel: unsuspend, confirm: quitToStart });
+  document.getElementById('btn-play').addEventListener('click', startQuiz);
+  document.getElementById('btn-play-again').addEventListener('click', startQuiz);
+  document.getElementById('btn-reload').addEventListener('click', () => window.location.reload());
+  document.getElementById('btn-replay').addEventListener('click', () => player.replay());
+  document.addEventListener('visibilitychange', onVisibilityChange);
+
+  // The YouTube player loads in parallel with the data.
+  const playerReady = player.initPlayer('yt-player');
+
+  try {
+    gameData = await loadData();
+  } catch (err) {
+    console.error(err);
+    ui.showError("Couldn't load the songs. Check your connection and try again.");
+    return;
+  }
+
+  ui.setLoadStatus('Connecting to YouTube…');
+  try {
+    await playerReady;
+    ui.setLoadStatus(`${gameData.songs.length} songs ready`, { ready: true });
+  } catch (err) {
+    console.error(err);
+    ui.showError("Couldn't reach YouTube, which streams the songs. Check your connection or disable content blockers, then try again.");
+  }
+}
+
+// --- Flow
+
+function startQuiz() {
+  if (!gameData || !player.isReady()) return;
+  state = quiz.createQuiz(gameData.songs, gameData.episodes);
+  consecutiveErrors = 0;
+  ui.showScreen('question');
+  // Called synchronously inside the tap so the first clip load carries the user gesture.
+  loadQuestion();
+}
+
+function loadQuestion() {
+  const song = quiz.currentSong(state);
+  const options = quiz.beginQuestion(state);
+  suspended = false;
+  resumeAudio = false;
+
+  ui.renderQuestion({
+    number: state.index + 1,
+    total: state.questions.length,
+    results: state.results,
+    score: state.score,
+    options,
+    skipsRemaining: state.skipsRemaining,
+    revealsRemaining: state.revealsRemaining,
+  });
+  ui.setPlayback('loading');
+  startTicker();
+
+  player.playClip(
+    { videoId: song.youtubeId, start: song.startSeconds, duration: song.clipDurationSeconds },
+    {
+      onPlaying: () => {
+        // Points only start draining once the song is actually audible.
+        quiz.startClock(state, now());
+        consecutiveErrors = 0;
+        ui.setPlayback('playing');
+      },
+      onBuffering: () => {
+        if (state.clock.startedAt == null) ui.setPlayback('buffering');
+      },
+      onPaused: () => ui.setPlayback('paused'),
+      onEnded: () => ui.setPlayback('ended'),
+      onBlocked: () => ui.setPlayback('blocked'),
+      onError: (code) => {
+        console.warn(`YouTube error ${code} for "${song.title}" (${song.youtubeId}); swapping in another song.`);
+        if (state.answered) return;
+        // One bad video is a data problem; several in a row means YouTube is refusing this
+        // page entirely (e.g. served from 127.0.0.1) — stop rather than drain the song pool.
+        consecutiveErrors += 1;
+        if (consecutiveErrors >= MAX_CONSECUTIVE_ERRORS) {
+          quitToStart();
+          ui.showError("YouTube isn't letting these clips play here. If you're running locally, open the game at http://localhost rather than 127.0.0.1.");
+          return;
+        }
+        quiz.replaceUnplayable(state);
+        if (quiz.isComplete(state)) finishQuiz();
+        else loadQuestion();
+      },
+    },
+  );
+}
+
+function onAnswer(episodeId) {
+  if (!state || state.answered || state.clock.startedAt == null) return;
+  const result = quiz.answer(state, episodeId, now());
+  if (result) showOutcome(result);
+}
+
+function onSkip() {
+  if (!state) return;
+  const result = quiz.skip(state, now());
+  if (result) showOutcome(result);
+}
+
+function onReveal() {
+  if (!state) return;
+  const song = quiz.reveal(state);
+  if (!song) return;
+  ui.showSongReveal(song);
+  ui.setLifelines(state);
+  haptic('light');
+}
+
+function showOutcome(result) {
+  // Visual, haptic and score change land on the same frame.
+  ui.lockOptions(result.pickedId, result.episode.id);
+  ui.markProgress(state.index, result.outcome);
+  ui.setScore(state.score);
+  haptic(result.outcome === 'correct' ? 'success' : result.outcome === 'wrong' ? 'error' : 'light');
+
+  // The song keeps playing under the reveal.
+  clearTimeout(resultTimer);
+  resultTimer = setTimeout(() => {
+    ui.showResult(result, { isLast: quiz.isLastQuestion(state) });
+  }, RESULT_SHEET_DELAY_MS);
+}
+
+function onContinue() {
+  if (!state || !state.answered) return;
+  clearTimeout(resultTimer);
+  ui.hideResult();
+  quiz.advance(state);
+  if (quiz.isComplete(state)) {
+    finishQuiz();
+  } else {
+    loadQuestion();
+  }
+}
+
+function finishQuiz() {
+  stopTicker();
+  player.stop();
+  ui.renderFinal(quiz.summary(state));
+  ui.showScreen('final');
+}
+
+function quitToStart() {
+  stopTicker();
+  clearTimeout(resultTimer);
+  player.stop();
+  state = null;
+  ui.showScreen('start');
+}
+
+function onInfo(episodeId, button) {
+  const episode = quiz.episodeById(state, episodeId);
+  if (episode) ui.togglePopover(episode, button);
+}
+
+// --- Live points + clip progress, one rAF loop
+
+function startTicker() {
+  stopTicker();
+  const tick = () => {
+    if (!state) return;
+    if (!state.answered) ui.setLivePoints(quiz.livePoints(state, now()));
+    ui.setClipProgress(player.clipProgress());
+    ticker = requestAnimationFrame(tick);
+  };
+  ticker = requestAnimationFrame(tick);
+}
+
+function stopTicker() {
+  cancelAnimationFrame(ticker);
+}
+
+// --- Backgrounding, or the End Quiz sheet, freezes the scoring clock and the audio
+
+function suspend() {
+  if (!state || quiz.isComplete(state) || suspended) return;
+  suspended = true;
+  quiz.pauseClock(state, now());
+  resumeAudio = !player.hasEnded();
+  player.pause();
+}
+
+function unsuspend() {
+  if (!state || !suspended) return;
+  suspended = false;
+  quiz.resumeClock(state, now());
+  if (resumeAudio) player.resume();
+  resumeAudio = false;
+}
+
+function onVisibilityChange() {
+  if (document.hidden) suspend();
+  else if (!ui.isQuitOpen()) unsuspend();
+}
+
+init();
