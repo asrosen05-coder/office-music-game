@@ -2,6 +2,8 @@
 
 **Repo:** `C:\Projects\Office Music Game\office-music-game`. Nothing is committed yet; all files are untracked.
 
+> **2026-10-08, audio source switched from YouTube to Apple's 30s iTunes previews.** YouTube embeds of official uploads show pre-roll ads, which made the game unplayable on phones. `js/player.js` is now a plain `<audio>` player; songs carry `appleTrackId`, `previewUrl`, `artworkUrl`, `appleMusicUrl` (no more `youtubeId`/`startSeconds`; Apple picks the 30s excerpt). The reveal sheet links to Apple Music. Currently 43 songs are live; the rest are being matched (Apple rate-limits the Search API). Sections below that describe YouTube behavior are out of date until this doc is rewritten.
+
 ## What this is
 A mobile-first, client-side-only web game. You hear a 30s clip of a song that played in an episode of *The Office* (US), then pick the episode from 4 options. A game is 10 random songs with 1 skip and 1 song reveal. There's no backend and no score persistence. Audio streams from each song's official YouTube upload through the IFrame Player API.
 
@@ -49,10 +51,10 @@ js/app.js         flow controller wiring data + player + quiz + ui
 - The old "primer" (mute → play → pause on an empty player) did nothing and was removed. Unlocking comes from loading the first clip inside the Play tap, with the in-iframe tap as fallback.
 
 ## Data
-- **34 songs across 34 episodes, seasons 1–9.** Sourced from the theoffice.fandom.com song list. Episode numbers come from the fandom wiki infoboxes, which count two-parters as two episodes (e.g. Café Disco = S5 E27).
+- **52 songs across 52 episodes, seasons 1–9** (34 at launch, plus 18 added 2026-10-08). Sourced from the theoffice.fandom.com song list. Episode numbers come from the fandom wiki infoboxes, which count two-parters as two episodes (e.g. Café Disco = S5 E27).
 - **Every song is unique to one episode in the set**, so each question has exactly one right answer. "My Humps" was dropped because it recurs as Michael's ringtone in six episodes; "The Longest Time" replaced it for *Michael's Birthday*. "Kind & Generous" also appears briefly in *The Job*, which is deliberately left out of the episode set.
 - All `youtubeId`s are official artist, label, VEVO, or auto-generated Topic uploads. "Kickstart My Heart" was moved off an unofficial reupload.
-- Every ID was confirmed embeddable through oEmbed and by loading it in a real IFrame player on `localhost`. All 34 loaded without errors; 26 were probed one by one and the rest played during real games.
+- Every ID was confirmed embeddable through oEmbed and by loading it in a real IFrame player on `localhost`. All 52 loaded without errors.
 - Every clip is 30s (`clipDurationSeconds`), and every start + 30s fits inside its video.
 - `startSeconds` are **estimates** and haven't been listened to. They're the most likely thing to need tuning.
 - Episode descriptions are original wording. No lyrics anywhere.

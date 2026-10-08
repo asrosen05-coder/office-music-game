@@ -534,7 +534,7 @@ svg { width: 1em; height: 1em; flex: none; }
   letter-spacing: -0.01em;
 }
 
-/* --- Now Playing card: the ambient layer is the actual (blurred) YouTube player */
+/* --- Now Playing card */
 
 .now-playing {
   position: relative;
@@ -554,25 +554,26 @@ svg { width: 1em; height: 1em; flex: none; }
   transform: translateZ(0);
 }
 
+/* Album art, blurred far past legibility, tints the card like Now Playing does. */
 .np-ambient {
   position: absolute;
-  inset: -24px;
+  inset: -40px;
   z-index: 0;
-  opacity: 0.3; /* kept visible (if illegible): embeds may refuse to play when fully hidden */
-  filter: blur(28px) saturate(1.6);
-  transform: scale(1.25);
-  transition: opacity 1.2s ease, filter 0.5s ease;
+  opacity: 0;
+  filter: blur(36px) saturate(1.7);
+  transform: scale(1.3);
+  transition: opacity 1.2s ease;
   pointer-events: none;
 }
-.np-ambient iframe,
-.np-ambient #yt-player {
+.np-ambient img {
   display: block;
   width: 100%;
   height: 100%;
-  border: 0;
+  object-fit: cover;
 }
-.now-playing[data-state="playing"] .np-ambient,
-.now-playing[data-state="ended"] .np-ambient { opacity: 0.75; }
+.now-playing.has-artwork .np-ambient { opacity: 0.6; }
+.now-playing.has-artwork[data-state="playing"] .np-ambient,
+.now-playing.has-artwork[data-state="ended"] .np-ambient { opacity: 0.85; }
 
 .np-sheen {
   position: absolute;
@@ -691,18 +692,11 @@ svg { width: 1em; height: 1em; flex: none; }
   to { opacity: 1; transform: none; filter: none; }
 }
 
-/* Blocked or paused (iOS needs a gesture inside the iframe): the player itself becomes the tap target. */
+/* Blocked or paused: the whole card is the play button. */
 .now-playing[data-state="blocked"],
 .now-playing[data-state="paused"] { cursor: pointer; }
-.now-playing[data-state="blocked"] .np-ambient,
-.now-playing[data-state="paused"] .np-ambient {
-  opacity: 0.02;
-  pointer-events: auto;
-  z-index: 3;
-  filter: none;
-  transform: none;
-  inset: 0;
-}
+.now-playing[data-state="blocked"]:active,
+.now-playing[data-state="paused"]:active { transform: scale(0.985); transition: transform 0.08s ease; }
 .now-playing[data-state="blocked"] .np-status::before,
 .now-playing[data-state="paused"] .np-status::before {
   content: "";
@@ -1015,6 +1009,49 @@ svg { width: 1em; height: 1em; flex: none; }
   color: var(--label-2);
 }
 
+.reveal-song-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.reveal-song-text { flex: 1; min-width: 0; }
+.reveal-song-text .reveal-primary,
+.reveal-song-text .reveal-secondary {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.reveal-artwork {
+  flex: none;
+  width: 52px;
+  height: 52px;
+  border-radius: 8px;
+  object-fit: cover;
+  background: var(--fill-strong);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.18);
+}
+.reveal-artwork:not([src]) { visibility: hidden; }
+
+.apple-link {
+  flex: none;
+  display: grid;
+  place-items: center;
+  min-height: 44px;
+  padding: 6px 12px;
+  border-radius: 999px;
+  background: var(--fill-strong);
+  color: var(--label);
+  font-size: 0.6875rem;
+  font-weight: 600;
+  line-height: 1.15;
+  letter-spacing: 0.01em;
+  text-align: center;
+  text-decoration: none;
+  transition: transform 0.12s var(--ease-out);
+}
+.apple-link:active { transform: scale(0.95); }
+.apple-link[hidden] { display: none; }
+
 .sheet-compact .title-3 { margin-top: 2px; }
 .sheet-compact .lede { margin: 6px 0 20px; font-size: 0.9375rem; }
 .sheet-compact .btn + .btn { margin-top: 6px; }
@@ -1169,7 +1206,10 @@ svg { width: 1em; height: 1em; flex: none; }
   .option[data-result="wrong"],
   .np-reveal,
   .sheet.is-open .result-badge,
-  .now-playing[data-state="blocked"] .np-status::before { animation: none; }
+  .now-playing[data-state="blocked"] .np-status::before,
+  .now-playing[data-state="paused"] .np-status::before,
+  .now-playing[data-state="blocked"]:active,
+  .now-playing[data-state="paused"]:active { animation: none; transform: none; }
   .popover, .popover.is-open { transform: none; transition: opacity 0.2s ease; }
   .option-mark { transition: opacity 0.2s ease; transform: none; }
   .btn:active, .option:has(.option-main:active), .icon-btn:active, .chip:active, .option-info:active { transform: none; }

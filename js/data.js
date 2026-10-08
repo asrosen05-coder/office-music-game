@@ -1,5 +1,5 @@
 const MIN_EPISODES = 4;
-const YOUTUBE_ID = /^[A-Za-z0-9_-]{11}$/;
+const PREVIEW_URL = /^https:\/\/[a-z0-9.-]+\.apple\.com\//;
 
 export async function loadData() {
   const [songsRes, episodesRes] = await Promise.all([
@@ -40,11 +40,11 @@ function validate(songs, episodes) {
     if (!episodeIds.has(song.episodeId)) {
       throw new Error(`Song "${song.id}" references unknown episodeId "${song.episodeId}".`);
     }
-    if (!YOUTUBE_ID.test(song.youtubeId)) {
-      throw new Error(`Song "${song.id}" has an invalid youtubeId.`);
+    if (!PREVIEW_URL.test(song.previewUrl || '')) {
+      throw new Error(`Song "${song.id}" has no valid Apple preview URL.`);
     }
-    if (!(song.clipDurationSeconds > 0) || !(song.startSeconds >= 0)) {
-      throw new Error(`Song "${song.id}" has an invalid clip window.`);
+    if (!Number.isInteger(song.appleTrackId)) {
+      throw new Error(`Song "${song.id}" has no appleTrackId.`);
     }
   }
 }

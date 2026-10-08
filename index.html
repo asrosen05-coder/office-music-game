@@ -9,6 +9,8 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="description" content="Hear a song from The Office. Guess the episode it played in.">
+<link rel="preconnect" href="https://audio-ssl.itunes.apple.com">
+<link rel="preconnect" href="https://is1-ssl.mzstatic.com">
 <title>Name That Episode</title>
 <link rel="stylesheet" href="css/styles.css">
 </head>
@@ -73,7 +75,7 @@
     </header>
 
     <div id="now-playing" class="now-playing" data-state="loading">
-      <div class="np-ambient" aria-hidden="true"><div id="yt-player"></div></div>
+      <div class="np-ambient" aria-hidden="true"><img id="np-artwork" alt=""></div>
       <div class="np-sheen" aria-hidden="true"></div>
       <div class="np-content">
         <p id="np-kicker" class="np-kicker">Song 1 of 10</p>
@@ -156,10 +158,14 @@
     <h2 id="result-title" class="title-2">Correct</h2>
     <p id="result-points" class="result-points"></p>
     <div class="reveal">
-      <div class="reveal-row">
-        <small>The song</small>
-        <p id="reveal-song" class="reveal-primary"></p>
-        <p id="reveal-artist" class="reveal-secondary"></p>
+      <div class="reveal-row reveal-song-row">
+        <img id="reveal-artwork" class="reveal-artwork" alt="" width="52" height="52">
+        <div class="reveal-song-text">
+          <small>The song</small>
+          <p id="reveal-song" class="reveal-primary"></p>
+          <p id="reveal-artist" class="reveal-secondary"></p>
+        </div>
+        <a id="reveal-apple" class="apple-link" href="#" target="_blank" rel="noopener">Listen on<br>Apple&nbsp;Music</a>
       </div>
       <div class="reveal-row">
         <small>Played in</small>

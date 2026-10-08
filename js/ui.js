@@ -44,6 +44,9 @@ const el = {
   revealArtist: $('reveal-artist'),
   revealEpisode: $('reveal-episode'),
   revealCode: $('reveal-code'),
+  revealArtwork: $('reveal-artwork'),
+  revealApple: $('reveal-apple'),
+  npArtwork: $('np-artwork'),
   next: $('btn-next'),
   finalScore: $('final-score'),
   finalRank: $('final-rank'),
@@ -80,12 +83,13 @@ export function showError(message) {
 
 // --- Question
 
-export function renderQuestion({ number, total, results, score, options, skipsRemaining, revealsRemaining }) {
+export function renderQuestion({ number, total, results, score, options, skipsRemaining, revealsRemaining, artworkUrl }) {
   closePopover();
   renderProgress(number, total, results);
   setScore(score, { animate: false });
 
   el.npKicker.textContent = `Song ${number} of ${total}`;
+  setArtwork(artworkUrl);
   el.nowPlaying.classList.remove('is-answered');
   el.npPoints.textContent = '1,000';
   setClipProgress(0);
@@ -189,6 +193,27 @@ const STATUS = {
 };
 
 /** loading | buffering | playing | paused | ended | blocked */
+function setArtwork(url) {
+  el.nowPlaying.classList.remove('has-artwork');
+  if (!url) {
+    el.npArtwork.removeAttribute('src');
+    return;
+  }
+  el.npArtwork.onload = () => {
+    if (el.npArtwork.src === url) el.nowPlaying.classList.add('has-artwork');
+  };
+  el.npArtwork.src = url;
+}
+
+/** Tapping the card starts audio when the browser wanted a gesture, or resumes after a pause. */
+export function onCardTap(handler) {
+  el.nowPlaying.addEventListener('click', (e) => {
+    if (e.target.closest('button')) return;
+    const state = el.nowPlaying.dataset.state;
+    if (state === 'blocked' || state === 'paused') handler();
+  });
+}
+
 export function setPlayback(state) {
   el.nowPlaying.dataset.state = state;
   el.npStatus.textContent = STATUS[state] || '';
@@ -353,6 +378,10 @@ export function showResult(result, { isLast }) {
   el.revealArtist.textContent = result.song.artist;
   el.revealEpisode.textContent = result.episode.title;
   el.revealCode.textContent = `Season ${result.episode.season}, Episode ${result.episode.episode}`;
+  if (result.song.artworkUrl) el.revealArtwork.src = result.song.artworkUrl.replace('600x600', '160x160');
+  else el.revealArtwork.removeAttribute('src');
+  el.revealApple.hidden = !result.song.appleMusicUrl;
+  if (result.song.appleMusicUrl) el.revealApple.href = result.song.appleMusicUrl;
   el.next.textContent = isLast ? 'See Results' : 'Next Song';
   resultSheet.open();
 }

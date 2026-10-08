@@ -27,10 +27,10 @@ async function init() {
   document.getElementById('btn-play-again').addEventListener('click', startQuiz);
   document.getElementById('btn-reload').addEventListener('click', () => window.location.reload());
   document.getElementById('btn-replay').addEventListener('click', () => player.replay());
+  ui.onCardTap(() => player.resume());
   document.addEventListener('visibilitychange', onVisibilityChange);
 
-  // The YouTube player loads in parallel with the data.
-  const playerReady = player.initPlayer('yt-player');
+  const playerReady = player.initPlayer();
 
   try {
     gameData = await loadData();
@@ -40,14 +40,8 @@ async function init() {
     return;
   }
 
-  ui.setLoadStatus('Connecting to YouTube…');
-  try {
-    await playerReady;
-    ui.setLoadStatus(`${gameData.songs.length} songs ready`, { ready: true });
-  } catch (err) {
-    console.error(err);
-    ui.showError("Couldn't reach YouTube, which streams the songs. Check your connection or disable content blockers, then try again.");
-  }
+  await playerReady;
+  ui.setLoadStatus(`${gameData.songs.length} songs ready`, { ready: true });
 }
 
 // --- Flow
@@ -75,12 +69,16 @@ function loadQuestion() {
     options,
     skipsRemaining: state.skipsRemaining,
     revealsRemaining: state.revealsRemaining,
+    artworkUrl: song.artworkUrl,
   });
   ui.setPlayback('loading');
   startTicker();
 
+  const next = state.questions[state.index + 1];
+  if (next) player.preload(next.previewUrl);
+
   player.playClip(
-    { videoId: song.youtubeId, start: song.startSeconds, duration: song.clipDurationSeconds },
+    { src: song.previewUrl, trackId: song.appleTrackId, duration: 30 },
     {
       onPlaying: () => {
         // Points only start draining once the song is actually audible.
@@ -95,14 +93,14 @@ function loadQuestion() {
       onEnded: () => ui.setPlayback('ended'),
       onBlocked: () => ui.setPlayback('blocked'),
       onError: (code) => {
-        console.warn(`YouTube error ${code} for "${song.title}" (${song.youtubeId}); swapping in another song.`);
+        console.warn(`Audio error ${code} for "${song.title}" (Apple track ${song.appleTrackId}); swapping in another song.`);
         if (state.answered) return;
-        // One bad video is a data problem; several in a row means YouTube is refusing this
-        // page entirely (e.g. served from 127.0.0.1) — stop rather than drain the song pool.
+        // One bad preview is a data problem; several in a row means the network or Apple's
+        // CDN is the problem — stop rather than drain the song pool.
         consecutiveErrors += 1;
         if (consecutiveErrors >= MAX_CONSECUTIVE_ERRORS) {
           quitToStart();
-          ui.showError("YouTube isn't letting these clips play here. If you're running locally, open the game at http://localhost rather than 127.0.0.1.");
+          ui.showError("The song clips aren't loading right now. Check your connection and try again.");
           return;
         }
         quiz.replaceUnplayable(state);
