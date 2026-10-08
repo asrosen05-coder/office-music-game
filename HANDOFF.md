@@ -1,68 +1,62 @@
 # Handoff: Name That Episode (Office Music Quiz)
 
-**Repo:** `C:\Projects\Office Music Game\office-music-game`. Nothing is committed yet; all files are untracked.
-
-> **2026-10-08, audio source switched from YouTube to Apple's 30s iTunes previews.** YouTube embeds of official uploads show pre-roll ads, which made the game unplayable on phones. `js/player.js` is now a plain `<audio>` player; songs carry `appleTrackId`, `previewUrl`, `artworkUrl`, `appleMusicUrl` (no more `youtubeId`/`startSeconds`; Apple picks the 30s excerpt). The reveal sheet links to Apple Music. 50 songs are live. Not included: "Christmas in Hollis" (no Apple preview exists; *Christmas Party* stays as a distractor episode) and "Boulevard of Broken Dreams" (Apple search returns only covers; *Secret Santa* stays as a distractor). Every asset URL in index.html carries `?v=N`; bump it on each release. Sections below that describe YouTube behavior are out of date until this doc is rewritten.
+**Live:** https://asrosen05-coder.github.io/office-music-game/ (GitHub Pages, deploys from `main`)
+**Repo:** `C:\Projects\Office Music Game\office-music-game` → `github.com/asrosen05-coder/office-music-game` (public)
 
 ## What this is
-A mobile-first, client-side-only web game. You hear a 30s clip of a song that played in an episode of *The Office* (US), then pick the episode from 4 options. A game is 10 random songs with 1 skip and 1 song reveal. There's no backend and no score persistence. Audio streams from each song's official YouTube upload through the IFrame Player API.
+A mobile-first, client-side-only web game. You hear a 30-second preview of a song that played in an episode of *The Office* (US), then pick the episode from 4 options. A game is 10 random songs, with 1 skip and 1 song reveal. At the end you can share an emoji breakdown. There's no backend and no score persistence. Audio is Apple's ad-free iTunes previews, played in a plain `<audio>` element.
 
-## Run it
+## Run it locally
 ```
 python -m http.server 8765      # then open http://localhost:8765
 ```
-- **Open it at `localhost`, not `127.0.0.1`.** YouTube returns error 150 (embedding refused) for every video when the page origin is `127.0.0.1`. This was verified in-browser. In production, any real domain works.
-- `file://` won't work because `fetch()` of the JSON files fails there.
+`file://` won't work because `fetch()` of the JSON files fails there.
+
+## Releasing (important)
+Every asset URL in `index.html` carries `?v=N`: the import map entries, the `app.js` script tag and the stylesheet link. **Bump N on every release.** Otherwise phones keep cached old code (GitHub Pages caches for about 10 minutes) and run it against new data. That broke the game on an iPhone once. Data files are fetched with `cache: 'no-cache'`, so they're always fresh. A new JS module also needs an entry in the import map.
 
 ## Architecture (vanilla HTML/CSS/JS, ES modules, no build step)
 ```
-index.html        all screens (start / question / final / error), popover, result + quit sheets, SVG icon symbols
+index.html        all screens, popover, result + quit sheets, toast, SVG icon sprite, versioned import map
 css/styles.css    tokens (light + dark), type scale, layout, components, reduced-motion / -transparency / -contrast
-js/data.js        fetch + validate songs/episodes (dup ids, dangling refs, youtubeId format, clip window)
-js/quiz.js        pure rules, no DOM: scoring, options, scoring clock (start/pause/resume), outcomes, unplayable swap
-js/player.js      YouTube wrapper: clip window enforcement, blocked/paused/ended detection, replay
+js/data.js        fetch (no-cache) + validate; bad songs are skipped with a console warning, bad episodes are fatal
+js/quiz.js        pure rules, no DOM: scoring, options (respecting alsoIn), clock, outcomes, skip, reveal, summary
+js/player.js      <audio> player for Apple previews: blocked/paused detection, preloading, preview-URL refresh
+js/share.js       share text builder (pure) + native share sheet / clipboard fallback
 js/motion.js      spring solver (Apple response/damping params), momentum projection, rubber-band, count-up, haptics
 js/sheet.js       bottom sheet: 1:1 drag, interruptible, velocity handoff, projection-based dismiss
 js/ui.js          all DOM rendering
-js/app.js         flow controller wiring data + player + quiz + ui
+js/app.js         flow controller wiring data + player + quiz + ui + share
 ```
 
-## Rules (unchanged from the original spec)
-- 4 options: 1 correct + 3 random distinct episodes. Each option has an ⓘ button that opens an original 1–2 sentence description.
-- Score = `200 + 800 · 0.5^(t/8)`: 1000 for an instant answer, 600 at 8s, ~540 at 10s, floors near 200. Wrong = 0. Skip = 0, counted separately. (The half-life was 4s originally and doubled after playtesting.)
-- **Song reveal:** once per game, it shows the current song's title and artist (never the episode) in the Now Playing card. It's free; the final recap marks revealed songs.
-- The scoring clock starts on the **first** YouTube `PLAYING` event only. It freezes while the tab is backgrounded or the End Quiz sheet is open.
-- Answers stay disabled until the clip actually starts, so you can't score 1000 by tapping before the audio plays.
+## Rules
+- **Options:** 4 per question, 1 correct and 3 random distinct episodes. A song's `alsoIn` episodes are never offered as wrong answers. Each option has an ⓘ button with an original 1–2 sentence description.
+- **Scoring:** `200 + 800 · 0.5^(t/8)`, which is 1000 for an instant answer, 600 at 8s, and floors near 200. Wrong and skip both score 0, tracked separately. The clock starts on the first `playing` event, and pauses while the app is backgrounded or the End Quiz sheet is open. Answers stay disabled until audio actually starts.
+- **Lifelines:** one skip and one song reveal per game. The reveal shows title and artist, never the episode, costs nothing, and is marked 👁️ in the share text and recap.
+- **Share:** 🟩 correct, 🟥 wrong, 🟪 skipped, then one line per song with 👁️ if it was revealed, plus the score and the play link. Episodes are left out so friends aren't spoiled. On touch devices it opens the native share sheet (Messages, etc.); otherwise it copies to the clipboard, falling back to the share sheet if the clipboard is refused.
 
 ## Design (Apple HIG-inspired)
-- System font with size-specific tracking. Rounded numerals for scores. Semantic light/dark color tokens.
-- The YouTube player is the Now Playing card's background, blurred to an unreadable ambient glow. When the browser blocks autoplay, or playback is paused, that iframe becomes the tap target. A tap *inside* the iframe is what unlocks audio on iOS.
-- The result sheet springs up and reveals the song and episode while the clip keeps playing. Drag it down (flick or slow drag, decided by projected momentum) or tap Next.
-- The ⓘ popover grows out of its button. Press feedback fires on pointer-down. Haptics on answer (Android only).
-- Live "pts available" counter, segmented progress bar (green/red/gray per result), and a Replay button after the clip ends (the score clock keeps running).
-- Final screen: score count-up, Office-themed rank, stat tiles, and a per-song recap.
-
-## Bugs fixed from the original build
-- The scoring clock reset on **every** `PLAYING` event (any resume or retry gave points back). It now starts once per question.
-- The clip timer kept running while backgrounded. The app now pauses audio and clock together.
-- If the YouTube API never loaded, `init()` hung and the Play button never got wired. Now there's a 10s timeout and an error screen.
-- An unplayable video silently shortened the quiz. It's now swapped for an unused song; after 3 failures in a row the app stops with an explanation instead of draining the song pool.
-- YouTube's `endSeconds` can leak a stale ENDED event into the next clip, which made the next song play past its window. The clip window is now enforced by the app, and only events for the current video count.
-- The old "primer" (mute → play → pause on an empty player) did nothing and was removed. Unlocking comes from loading the first clip inside the Play tap, with the in-iframe tap as fallback.
+- System font with size-specific tracking and rounded numerals. Semantic light and dark tokens. Purple marks a skipped song everywhere.
+- The Now Playing card is tinted by the song's album art, heavily blurred. When the browser blocks autoplay (iOS, first clip), the card says "Tap to play", and tapping it starts the audio.
+- The result sheet springs up with the song, cover art, episode, an "Also heard in …" line for multi-episode songs, and a "Listen on Apple Music" link. Drag it down or tap Next.
+- Press feedback fires on pointer-down. Haptics on answer (Android). Live points counter, segmented progress bar, Replay after the clip ends.
 
 ## Data
-- **52 songs across 52 episodes, seasons 1–9** (34 at launch, plus 18 added 2026-10-08). Sourced from the theoffice.fandom.com song list. Episode numbers come from the fandom wiki infoboxes, which count two-parters as two episodes (e.g. Café Disco = S5 E27).
-- **Every song is unique to one episode in the set**, so each question has exactly one right answer. "My Humps" was dropped because it recurs as Michael's ringtone in six episodes; "The Longest Time" replaced it for *Michael's Birthday*. "Kind & Generous" also appears briefly in *The Job*, which is deliberately left out of the episode set.
-- All `youtubeId`s are official artist, label, VEVO, or auto-generated Topic uploads. "Kickstart My Heart" was moved off an unofficial reupload.
-- Every ID was confirmed embeddable through oEmbed and by loading it in a real IFrame player on `localhost`. All 52 loaded without errors.
-- Every clip is 30s (`clipDurationSeconds`), and every start + 30s fits inside its video.
-- `startSeconds` are **estimates** and haven't been listened to. They're the most likely thing to need tuning.
-- Episode descriptions are original wording. No lyrics anywhere.
+- **185 songs, 95 episodes, seasons 1–9.** 90 episodes have at least one song. Five are distractor-only: *Christmas Party*, *The Convention*, *Women's Appreciation*, *The Job*, *The Banker*.
+- **Source:** the theoffice.fandom.com song list. Episode numbers come from the wiki infoboxes, which count two-parters as two episodes (e.g. Café Disco = S5 E27).
+- **Inclusion rules:** songs played, performed, sung or hummed in an episode, using the original commercial recording. Parodies whose melody is the original (e.g. "Ryan Started the Fire") use the original song. **Excluded:** traditional or public-domain songs, classical pieces, TV themes and ad jingles, in-show originals with no release, deleted scenes, and songs only quoted or mentioned.
+- **Multi-episode songs:** the answer is the episode where the song matters most; the rest go in `alsoIn`. Current cases: My Humps, Mambo No. 5, Sing, I Will Survive, Car Wash, Little Drummer Boy, Kind & Generous.
+- **Song schema:** `{ id, title, artist, episodeId, alsoIn?, appleTrackId, previewUrl, artworkUrl, appleMusicUrl, notes }`. Every match was reviewed by hand to be the original studio recording (no live versions, remixes, re-recordings or covers). Where search only surfaced covers, the original was pinned by track ID.
+- **Not on Apple:** "Christmas in Hollis", "Girls Gone Wild" (Captain Ahab), "Boy Hangover", and In-Flight Safety's "Big White Elephant" and "Model Homes".
+- **Preview URLs** can change when Apple re-ingests a track. The player then looks up a fresh URL by `appleTrackId` once before swapping in a different song.
+- **Episode descriptions** are original wording. No lyrics anywhere.
 
-## Verified (live, desktop Chrome, real YouTube audio)
-Start → Play autoplays song 1; songs 2–10 autoplay after Next. Live points drain. Correct, wrong, and skip all work. The clip stops at its boundary and Replay works. Popover position is correct. Drag-to-dismiss advances. The End Quiz sheet pauses and resumes the clock correctly. The final screen and Play Again work. Dark mode was checked. Logic tests for `quiz.js` pass (scoring, clock pause/resume, skip, unplayable swap).
+## Verified
+- **iPhone (by the user):** the Apple-preview version loads and plays.
+- **Node logic tests (27 passing):** scoring, clock pause and resume, skip, reveal, unplayable swap, `alsoIn` never offered as an option (2,000 generated questions), and the share-text format.
+- **Data:** every song references a real episode, has a valid Apple preview and track ID, no duplicate tracks, and no `alsoIn` containing its own answer episode. All 185 preview and artwork URLs respond.
+- **Desktop Chrome:** final screen layout and share text.
 
 ## Not yet verified
-1. **A real iPhone with Safari.** This is the most important remaining test. Expect the first clip to need a tap on the card ("Tap to play"), with later clips autoplaying. Also check the sheet drag and safe areas.
-2. Listening through each clip to tune `startSeconds` so each lands on a recognizable hook.
-3. Nothing is committed to git yet.
+1. **The Share button on a real phone.** On iPhone it should open the share sheet with Messages.
+2. **The clipboard path on a desktop browser.** My test environment's browser window wasn't focused, so the clipboard was refused there.
