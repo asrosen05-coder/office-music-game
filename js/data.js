@@ -38,6 +38,8 @@ function validate(songs, episodes) {
       : !episodeIds.has(song.episodeId) ? `unknown episodeId "${song.episodeId}"`
       : !PREVIEW_URL.test(song.previewUrl || '') ? 'no valid Apple preview URL'
       : !Number.isInteger(song.appleTrackId) ? 'no appleTrackId'
+      : song.alsoIn !== undefined && (!Array.isArray(song.alsoIn) || song.alsoIn.includes(song.episodeId))
+        ? 'alsoIn must be a list of its other episodes'
       : null;
     songIds.add(song.id);
     if (problem) console.warn(`Skipping song "${song.id}": ${problem}.`);

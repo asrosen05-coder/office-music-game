@@ -53,7 +53,9 @@ export function episodeById(state, id) {
 export function beginQuestion(state) {
   const song = currentSong(state);
   const correct = episodeById(state, song.episodeId);
-  const distractors = shuffle(state.episodes.filter((e) => e.id !== song.episodeId)).slice(0, 3);
+  // A song heard in several episodes must never offer one of its other episodes as a wrong answer.
+  const excluded = new Set([song.episodeId, ...(song.alsoIn || [])]);
+  const distractors = shuffle(state.episodes.filter((e) => !excluded.has(e.id))).slice(0, 3);
   state.options = shuffle([correct, ...distractors]);
   state.clock = { startedAt: null, pausedAt: null };
   state.answered = false;
@@ -106,6 +108,7 @@ function record(state, outcome, pickedId, now) {
     points,
     elapsedMs: elapsed,
     revealed: state.revealed,
+    alsoIn: (song.alsoIn || []).map((id) => episodeById(state, id)).filter(Boolean),
   };
   state.answered = true;
   state.score += points;

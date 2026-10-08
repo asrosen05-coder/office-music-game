@@ -3,12 +3,14 @@ import * as player from './player.js';
 import * as quiz from './quiz.js';
 import * as ui from './ui.js';
 import { haptic } from './motion.js';
+import { buildShareText, shareResults } from './share.js';
 
 const RESULT_SHEET_DELAY_MS = 420; // let the marked answer register before the sheet rises
 const MAX_CONSECUTIVE_ERRORS = 3;
 
 let gameData = null;
 let consecutiveErrors = 0;
+let finalSummary = null;
 let state = null;
 let ticker = 0;
 let suspended = false;
@@ -21,6 +23,7 @@ async function init() {
   ui.onOptionAction({ answer: onAnswer, info: onInfo });
   ui.onSkip(onSkip);
   ui.onReveal(onReveal);
+  ui.onShare(onShare);
   ui.onContinue(onContinue);
   ui.onQuit({ open: suspend, cancel: unsuspend, confirm: quitToStart });
   document.getElementById('btn-play').addEventListener('click', startQuiz);
@@ -161,7 +164,8 @@ function onContinue() {
 function finishQuiz() {
   stopTicker();
   player.stop();
-  ui.renderFinal(quiz.summary(state));
+  finalSummary = quiz.summary(state);
+  ui.renderFinal(finalSummary);
   ui.showScreen('final');
 }
 
@@ -171,6 +175,14 @@ function quitToStart() {
   player.stop();
   state = null;
   ui.showScreen('start');
+}
+
+async function onShare() {
+  if (!finalSummary) return;
+  const text = buildShareText(finalSummary, location.origin + location.pathname);
+  const outcome = await shareResults(text);
+  if (outcome === 'copied') ui.showToast('Results copied to clipboard');
+  else if (outcome === 'failed') ui.showToast("Couldn't share. Try again.");
 }
 
 function onInfo(episodeId, button) {

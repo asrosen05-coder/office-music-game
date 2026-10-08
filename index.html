@@ -12,7 +12,7 @@
 <link rel="preconnect" href="https://audio-ssl.itunes.apple.com">
 <link rel="preconnect" href="https://is1-ssl.mzstatic.com">
 <title>Name That Episode</title>
-<link rel="stylesheet" href="css/styles.css?v=4">
+<link rel="stylesheet" href="css/styles.css?v=5">
 </head>
 <body>
 
@@ -22,6 +22,7 @@
   <symbol id="i-forward" viewBox="0 0 24 24"><path d="M4 6.5v11l7.5-5.5zM12.5 6.5v11L20 12z" fill="currentColor" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"/></symbol>
   <symbol id="i-info" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9.25" fill="none" stroke="currentColor" stroke-width="1.6"/><circle cx="12" cy="7.9" r="1.25" fill="currentColor"/><path d="M12 11v6" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></symbol>
   <symbol id="i-replay" viewBox="0 0 24 24"><path d="M4.5 12a7.5 7.5 0 1 0 2.4-5.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M5 3.5v4h4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+  <symbol id="i-share" viewBox="0 0 24 24"><path d="M12 3.5v11M8 7.5l4-4 4 4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M8.5 10.5H7a2 2 0 0 0-2 2V19a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-6.5a2 2 0 0 0-2-2h-1.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></symbol>
   <symbol id="i-eye" viewBox="0 0 24 24"><path d="M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12z" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linejoin="round"/><circle cx="12" cy="12" r="3.2" fill="currentColor"/></symbol>
   <symbol id="i-notes" viewBox="0 0 24 24"><path d="M9 18V6l10-2v12" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><circle cx="6.5" cy="18" r="2.5" fill="currentColor"/><circle cx="16.5" cy="16" r="2.5" fill="currentColor"/></symbol>
   <symbol id="i-bolt" viewBox="0 0 24 24"><path d="M13 2.5L5 13.5h6l-1 8 8-11h-6z" fill="currentColor"/></symbol>
@@ -124,8 +125,11 @@
       <h2 class="section-label">Your songs</h2>
       <ol id="recap" class="grouped recap"></ol>
     </div>
-    <footer class="dock">
-      <button id="btn-play-again" class="btn btn-filled btn-large" type="button">Play Again</button>
+    <footer class="dock dock-stack">
+      <button id="btn-share" class="btn btn-filled btn-large" type="button">
+        <svg aria-hidden="true"><use href="#i-share"/></svg>Share Results
+      </button>
+      <button id="btn-play-again" class="btn btn-plain btn-large" type="button">Play Again</button>
     </footer>
   </section>
 
@@ -149,6 +153,8 @@
   <p id="popover-text" class="popover-text"></p>
 </div>
 
+<div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
+
 <!-- Result sheet -->
 <div id="sheet-result" class="sheet" hidden>
   <div class="sheet-scrim"></div>
@@ -171,6 +177,7 @@
         <small>Played in</small>
         <p id="reveal-episode" class="reveal-primary"></p>
         <p id="reveal-code" class="reveal-secondary"></p>
+        <p id="reveal-also" class="reveal-also" hidden></p>
       </div>
     </div>
     <button id="btn-next" class="btn btn-filled btn-large" type="button" data-autofocus>Next Song</button>
@@ -193,16 +200,17 @@
 <script type="importmap">
 {
   "imports": {
-    "./js/app.js": "./js/app.js?v=4",
-    "./js/data.js": "./js/data.js?v=4",
-    "./js/motion.js": "./js/motion.js?v=4",
-    "./js/player.js": "./js/player.js?v=4",
-    "./js/quiz.js": "./js/quiz.js?v=4",
-    "./js/sheet.js": "./js/sheet.js?v=4",
-    "./js/ui.js": "./js/ui.js?v=4"
+    "./js/app.js": "./js/app.js?v=5",
+    "./js/data.js": "./js/data.js?v=5",
+    "./js/motion.js": "./js/motion.js?v=5",
+    "./js/player.js": "./js/player.js?v=5",
+    "./js/quiz.js": "./js/quiz.js?v=5",
+    "./js/share.js": "./js/share.js?v=5",
+    "./js/sheet.js": "./js/sheet.js?v=5",
+    "./js/ui.js": "./js/ui.js?v=5"
   }
 }
 </script>
-<script type="module" src="js/app.js?v=4"></script>
+<script type="module" src="js/app.js?v=5"></script>
 </body>
 </html>

@@ -44,6 +44,8 @@ const el = {
   revealArtist: $('reveal-artist'),
   revealEpisode: $('reveal-episode'),
   revealCode: $('reveal-code'),
+  revealAlso: $('reveal-also'),
+  toast: $('toast'),
   revealArtwork: $('reveal-artwork'),
   revealApple: $('reveal-apple'),
   npArtwork: $('np-artwork'),
@@ -362,6 +364,11 @@ const resultSheet = createSheet($('sheet-result'), {
 });
 resultSheet.handlers = {};
 
+function listTitles(titles) {
+  if (titles.length <= 1) return titles.join('');
+  return `${titles.slice(0, -1).join(', ')} and ${titles[titles.length - 1]}`;
+}
+
 const RESULT_COPY = {
   correct: { title: 'Correct', icon: '#i-check' },
   wrong: { title: 'Not quite', icon: '#i-xmark' },
@@ -378,6 +385,10 @@ export function showResult(result, { isLast }) {
   el.revealArtist.textContent = result.song.artist;
   el.revealEpisode.textContent = result.episode.title;
   el.revealCode.textContent = `Season ${result.episode.season}, Episode ${result.episode.episode}`;
+  el.revealAlso.hidden = !result.alsoIn.length;
+  el.revealAlso.textContent = result.alsoIn.length
+    ? `Also heard in ${listTitles(result.alsoIn.map((e) => e.title))}`
+    : '';
   if (result.song.artworkUrl) el.revealArtwork.src = result.song.artworkUrl.replace('600x600', '160x160');
   else el.revealArtwork.removeAttribute('src');
   el.revealApple.hidden = !result.song.appleMusicUrl;
@@ -435,6 +446,25 @@ const RANKS = [
   [0.1, 'Temp energy. Ryan would be proud.'],
   [0, 'Toby could have done better.'],
 ];
+
+export function onShare(handler) {
+  $('btn-share').addEventListener('click', handler);
+}
+
+let toastTimer = 0;
+
+/** Brief confirmation pill above the dock, announced to screen readers. */
+export function showToast(text) {
+  clearTimeout(toastTimer);
+  el.toast.textContent = text;
+  el.toast.hidden = false;
+  void el.toast.offsetWidth;
+  el.toast.classList.add('is-visible');
+  toastTimer = setTimeout(() => {
+    el.toast.classList.remove('is-visible');
+    toastTimer = setTimeout(() => { el.toast.hidden = true; }, 300);
+  }, 2200);
+}
 
 export function renderFinal({ score, maxScore, correct, wrong, skipped, results }) {
   const ratio = maxScore ? score / maxScore : 0;
