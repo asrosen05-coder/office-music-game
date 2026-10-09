@@ -42,7 +42,7 @@ assets/icons/     icon.svg (browser tab) + apple-touch-icon.png (180×180 iPhone
 - **Options:** 4 per question, 1 correct and 3 random distinct episodes. A song's `alsoIn` episodes are never offered as wrong answers. Each option has an ⓘ button with an original 1–2 sentence description.
 - **Scoring:** `200 + 800 · 0.5^(t/8)`, which is 1000 for an instant answer, 600 at 8s, and floors near 200. Wrong and skip both score 0, tracked separately. The clock starts on the first `playing` event, and pauses while the app is backgrounded or the End Quiz sheet is open. Answers stay disabled until audio actually starts.
 - **Lifelines:** one skip and one song reveal per game. The reveal shows title and artist, never the episode, costs nothing, and is marked 👁️ in the share text and recap.
-- **Share:** 🟩 correct, 🟥 wrong, 🟪 skipped, then one line per song with 👁️ if it was revealed, plus the score and the play link. Episodes are left out so friends aren't spoiled. On touch devices it opens the native share sheet (Messages, etc.); otherwise it copies to the clipboard, falling back to the share sheet if the clipboard is refused.
+- **Share:** 🟩 correct, 🟥 wrong, ⬜ skipped, then one line per song with 👁️ if it was revealed, plus the score and the play link. Episodes are left out so friends aren't spoiled. On touch devices it opens the native share sheet (Messages, etc.); otherwise it copies to the clipboard, falling back to the share sheet if the clipboard is refused.
 
 ## Design (Apple HIG-inspired)
 - System font with size-specific tracking and rounded numerals. Semantic light and dark tokens in a Dunder Mifflin palette (navy, copier-paper cream, manila gold). Slate gray marks a skipped song everywhere.

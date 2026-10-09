@@ -1,7 +1,7 @@
 // Share text for a finished quiz, and the share/copy mechanics. Song titles only — never
 // episodes — so a friend can still play the same songs without spoilers.
 
-const SQUARES = { correct: '🟩', wrong: '🟥', skipped: '🟪' };
+const SQUARES = { correct: '🟩', wrong: '🟥', skipped: '⬜' };
 const REVEALED = '👁️';
 
 /** summary: quiz.summary(state). url: where friends can play. */
