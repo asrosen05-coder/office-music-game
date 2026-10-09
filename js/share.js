@@ -9,7 +9,7 @@ export function buildShareText({ score, correct, results }, url) {
   const grid = results.map((r) => SQUARES[r.outcome]).join('');
   const lines = results.map((r) => `${SQUARES[r.outcome]} ${r.song.title}${r.revealed ? ` ${REVEALED}` : ''}`);
   return [
-    `Name That Episode 🎵 ${score.toLocaleString('en-US')} pts (${correct}/${results.length})`,
+    `That's What She Sang 🎵 ${score.toLocaleString('en-US')} pts (${correct}/${results.length})`,
     grid,
     '',
     ...lines,
