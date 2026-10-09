@@ -187,6 +187,8 @@ svg { width: 1em; height: 1em; flex: none; }
   color: var(--accent);
 }
 
+.nowrap { white-space: nowrap; }
+
 .lede {
   margin: 0;
   font-size: 1.0625rem;
